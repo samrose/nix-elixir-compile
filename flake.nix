@@ -4,13 +4,27 @@
 
   outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
+      let
+      	pkgs = nixpkgs.legacyPackages.${system};
+        myvar = "hello";
+      in
       {
-      packages.default = (import ./default.nix)
-            { pkgs = nixpkgs.legacyPackages.${system}; };
+      
+      packages.default = (import ./default.nix) { inherit pkgs system; };
+      packages.runme = pkgs.writeScriptBin "runme" 
+      ''
+      #!/usr/bin/env bash	
+      "${pkgs.elixir}/bin/elixir" --version
+      '';
 
+      # An app that uses the `runme` package
+      apps.runme = {
+        type = "app";
+        program = "${self.packages.${system}.runme}/bin/runme";
+      };
       devShell = 
       let
-      pkgs = nixpkgs.legacyPackages.${system};
+      #pkgs = nixpkgs.legacyPackages.${system};
       mkShell = nixpkgs.legacyPackages.${system}.mkShell;
       basePackages = with pkgs; [alejandra bat elixir_1_16 entr gnumake overmind jq mix2nix graphviz imagemagick inotify-tools python3 unixtools.netstat];
       hooks = ''
